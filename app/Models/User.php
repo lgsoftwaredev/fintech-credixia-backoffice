@@ -1,48 +1,82 @@
 <?php
 
+/**
+ * Created by Reliese Model.
+ */
+
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Laravel\Passport\HasApiTokens;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * Class User
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property string|null $phone
+ * @property string $kyc_status
+ * @property int|null $risk_score
+ * @property Carbon|null $email_verified_at
+ * @property Carbon|null $phone_verified_at
+ * @property string $password
+ * @property string|null $remember_token
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @property Collection|Consent[] $consents
+ * @property KycRecord|null $kyc_record
+ * @property Collection|Loan[] $loans
+ *
+ * @package App\Models
+ */
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+	protected $table = 'users';
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+	protected $casts = [
+		'risk_score' => 'int',
+		'email_verified_at' => 'datetime',
+		'phone_verified_at' => 'datetime'
+	];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+	protected $hidden = [
+		'password',
+		'remember_token'
+	];
+
+	protected $fillable = [
+		'name',
+		'email',
+		'phone',
+		'kyc_status',
+		'risk_score',
+		'email_verified_at',
+		'phone_verified_at',
+		'password',
+		'remember_token'
+	];
+
+	public function consents()
+	{
+		return $this->hasMany(Consent::class);
+	}
+
+	public function kyc_record()
+	{
+		return $this->hasOne(KycRecord::class);
+	}
+
+	public function loans()
+	{
+		return $this->hasMany(Loan::class);
+	}
 }

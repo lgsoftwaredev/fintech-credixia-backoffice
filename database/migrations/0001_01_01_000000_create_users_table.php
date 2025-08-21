@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -15,7 +14,17 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('phone', 32)->unique()->nullable();
+
+            // KYC high-level status reflected on user
+            $table->enum('kyc_status', ['pending', 'approved', 'rejected'])->default('pending');
+
+            // Risk score snapshot (0..1000 typical)
+            $table->unsignedSmallInteger('risk_score')->nullable();
+
+            // Verifications (useful for OTP/email flows)
             $table->timestamp('email_verified_at')->nullable();
+            $table->timestamp('phone_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
