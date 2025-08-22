@@ -13,6 +13,10 @@ use Laravel\Passport\HasApiTokens;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Passport\Contracts\OAuthenticatable;
+use Illuminate\Support\Facades\Cache; // 👈 IMPORTANTE
+
 
 /**
  * Class User
@@ -36,47 +40,67 @@ use Illuminate\Notifications\Notifiable;
  *
  * @package App\Models
  */
-class User extends Authenticatable
+class User extends Authenticatable implements OAuthenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-	protected $table = 'users';
+    protected $table = 'users';
 
-	protected $casts = [
-		'risk_score' => 'int',
-		'email_verified_at' => 'datetime',
-		'phone_verified_at' => 'datetime'
-	];
+    protected $casts = [
+        'risk_score' => 'int',
+        'email_verified_at' => 'datetime',
+        'phone_verified_at' => 'datetime'
+    ];
 
-	protected $hidden = [
-		'password',
-		'remember_token'
-	];
+    protected $hidden = [
+        'password',
+        'remember_token'
+    ];
 
-	protected $fillable = [
-		'name',
-		'email',
-		'phone',
-		'kyc_status',
-		'risk_score',
-		'email_verified_at',
-		'phone_verified_at',
-		'password',
-		'remember_token'
-	];
+    protected $fillable = [
+        'name',
+        'email',
+        'phone',
+        'kyc_status',
+        'risk_score',
+        'email_verified_at',
+        'phone_verified_at',
+        'password',
+        'remember_token'
+    ];
 
-	public function consents()
-	{
-		return $this->hasMany(Consent::class);
-	}
+    public function consents()
+    {
+        return $this->hasMany(Consent::class);
+    }
 
-	public function kyc_record()
-	{
-		return $this->hasOne(KycRecord::class);
-	}
+    public function kyc_record()
+    {
+        return $this->hasOne(KycRecord::class);
+    }
 
-	public function loans()
-	{
-		return $this->hasMany(Loan::class);
-	}
+    public function loans()
+    {
+        return $this->hasMany(Loan::class);
+    }
+    // Permite login por email o phone
+    public function findForPassport(string $username): ?self
+    {
+        return str_contains($username, '@')
+            ? $this->where('email', $username)->first()
+            : $this->where('phone', $username)->first();
+    }
+
+    // Acepta "__otp_verified__" SOLO si existe el flag en cache (y lo consume)
+    public function validateForPassportPasswordGrant(string $password): bool
+    {
+        if ($password === '__otp_verified__') {
+            $key = "otp:verified:{$this->id}";
+            $ok = Cache::pull($key, false); // obtiene y borra
+            \Log::info('validateForPassportPasswordGrant', ['user_id' => $this->id, 'otp_ok' => $ok]);
+            return (bool) $ok;
+        }
+
+        return Hash::check($password, $this->password);
+    }
 }

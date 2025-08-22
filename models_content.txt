@@ -1,0 +1,887 @@
+========== ./ScoringWeight.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class ScoringWeight
+ * 
+ * @property int $id
+ * @property string $version
+ * @property bool $is_active
+ * @property int $weight_history_of_payments
+ * @property int $weight_user_tenure
+ * @property int $weight_current_risk
+ * @property int $weight_device_trust
+ * @property int $weight_kyc
+ * @property array|null $extra
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @package App\Models
+ */
+class ScoringWeight extends Model
+{
+	protected $table = 'scoring_weights';
+
+	protected $casts = [
+		'is_active' => 'bool',
+		'weight_history_of_payments' => 'int',
+		'weight_user_tenure' => 'int',
+		'weight_current_risk' => 'int',
+		'weight_device_trust' => 'int',
+		'weight_kyc' => 'int',
+		'extra' => 'json'
+	];
+
+	protected $fillable = [
+		'version',
+		'is_active',
+		'weight_history_of_payments',
+		'weight_user_tenure',
+		'weight_current_risk',
+		'weight_device_trust',
+		'weight_kyc',
+		'extra'
+	];
+}
+-e 
+
+========== ./Cache.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class Cache
+ * 
+ * @property string $key
+ * @property string $value
+ * @property int $expiration
+ *
+ * @package App\Models
+ */
+class Cache extends Model
+{
+	protected $table = 'cache';
+	protected $primaryKey = 'key';
+	public $incrementing = false;
+	public $timestamps = false;
+
+	protected $casts = [
+		'expiration' => 'int'
+	];
+
+	protected $fillable = [
+		'value',
+		'expiration'
+	];
+}
+-e 
+
+========== ./Session.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class Session
+ * 
+ * @property string $id
+ * @property int|null $user_id
+ * @property string|null $ip_address
+ * @property string|null $user_agent
+ * @property string $payload
+ * @property int $last_activity
+ *
+ * @package App\Models
+ */
+class Session extends Model
+{
+	protected $table = 'sessions';
+	public $incrementing = false;
+	public $timestamps = false;
+
+	protected $casts = [
+		'user_id' => 'int',
+		'last_activity' => 'int'
+	];
+
+	protected $fillable = [
+		'user_id',
+		'ip_address',
+		'user_agent',
+		'payload',
+		'last_activity'
+	];
+}
+-e 
+
+========== ./User.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Laravel\Passport\HasApiTokens;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Passport\Contracts\OAuthenticatable;
+use Illuminate\Support\Facades\Cache; // 👈 IMPORTANTE
+
+
+/**
+ * Class User
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property string|null $phone
+ * @property string $kyc_status
+ * @property int|null $risk_score
+ * @property Carbon|null $email_verified_at
+ * @property Carbon|null $phone_verified_at
+ * @property string $password
+ * @property string|null $remember_token
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @property Collection|Consent[] $consents
+ * @property KycRecord|null $kyc_record
+ * @property Collection|Loan[] $loans
+ *
+ * @package App\Models
+ */
+class User extends Authenticatable implements OAuthenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable;
+
+    protected $table = 'users';
+
+    protected $casts = [
+        'risk_score' => 'int',
+        'email_verified_at' => 'datetime',
+        'phone_verified_at' => 'datetime'
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token'
+    ];
+
+    protected $fillable = [
+        'name',
+        'email',
+        'phone',
+        'kyc_status',
+        'risk_score',
+        'email_verified_at',
+        'phone_verified_at',
+        'password',
+        'remember_token'
+    ];
+
+    public function consents()
+    {
+        return $this->hasMany(Consent::class);
+    }
+
+    public function kyc_record()
+    {
+        return $this->hasOne(KycRecord::class);
+    }
+
+    public function loans()
+    {
+        return $this->hasMany(Loan::class);
+    }
+    // Permite login por email o phone
+    public function findForPassport(string $username): ?self
+    {
+        return str_contains($username, '@')
+            ? $this->where('email', $username)->first()
+            : $this->where('phone', $username)->first();
+    }
+
+    // Acepta "__otp_verified__" SOLO si existe el flag en cache (y lo consume)
+    public function validateForPassportPasswordGrant(string $password): bool
+    {
+        if ($password === '__otp_verified__') {
+            $key = "otp:verified:{$this->id}";
+            $ok = Cache::pull($key, false); // obtiene y borra
+            \Log::info('validateForPassportPasswordGrant', ['user_id' => $this->id, 'otp_ok' => $ok]);
+            return (bool) $ok;
+        }
+
+        return Hash::check($password, $this->password);
+    }
+}
+-e 
+
+========== ./RuleSet.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class RuleSet
+ * 
+ * @property int $id
+ * @property string $version
+ * @property bool $is_active
+ * @property float $base_interest_rate
+ * @property float $late_interest_rate
+ * @property int $min_term_days
+ * @property int $max_term_days
+ * @property float $initial_max_amount
+ * @property float $good_payer_increment_percent
+ * @property bool $allow_second_loan
+ * @property array|null $extra
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @package App\Models
+ */
+class RuleSet extends Model
+{
+	protected $table = 'rule_sets';
+
+	protected $casts = [
+		'is_active' => 'bool',
+		'base_interest_rate' => 'float',
+		'late_interest_rate' => 'float',
+		'min_term_days' => 'int',
+		'max_term_days' => 'int',
+		'initial_max_amount' => 'float',
+		'good_payer_increment_percent' => 'float',
+		'allow_second_loan' => 'bool',
+		'extra' => 'json'
+	];
+
+	protected $fillable = [
+		'version',
+		'is_active',
+		'base_interest_rate',
+		'late_interest_rate',
+		'min_term_days',
+		'max_term_days',
+		'initial_max_amount',
+		'good_payer_increment_percent',
+		'allow_second_loan',
+		'extra'
+	];
+}
+-e 
+
+========== ./Payment.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+/**
+ * Class Payment
+ * 
+ * @property int $id
+ * @property int $loan_id
+ * @property Carbon $due_date
+ * @property float $amount_due
+ * @property float $amount_paid
+ * @property string $status
+ * @property string $channel
+ * @property string|null $processor
+ * @property string|null $reference
+ * @property string|null $external_id
+ * @property string|null $idempotency_key
+ * @property string|null $receipt_url
+ * @property string|null $evidence_path
+ * @property Carbon|null $paid_at
+ * @property Carbon|null $reconciled_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property string|null $deleted_at
+ * 
+ * @property Loan $loan
+ *
+ * @package App\Models
+ */
+class Payment extends Model
+{
+	use SoftDeletes;
+	protected $table = 'payments';
+
+	protected $casts = [
+		'loan_id' => 'int',
+		'due_date' => 'datetime',
+		'amount_due' => 'float',
+		'amount_paid' => 'float',
+		'paid_at' => 'datetime',
+		'reconciled_at' => 'datetime'
+	];
+
+	protected $fillable = [
+		'loan_id',
+		'due_date',
+		'amount_due',
+		'amount_paid',
+		'status',
+		'channel',
+		'processor',
+		'reference',
+		'external_id',
+		'idempotency_key',
+		'receipt_url',
+		'evidence_path',
+		'paid_at',
+		'reconciled_at'
+	];
+
+	public function loan()
+	{
+		return $this->belongsTo(Loan::class);
+	}
+}
+-e 
+
+========== ./UserDeviceToken.php ==========
+<?php
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class UserDeviceToken
+ *
+ * @property int $id
+ * @property int $user_id
+ * @property string $fcm_token
+ * @property string|null $device_info
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @property User $user
+ */
+class UserDeviceToken extends Model
+{
+    protected $table = 'user_device_tokens';
+
+    protected $casts = [
+        'user_id' => 'int',
+    ];
+
+    protected $hidden = [
+        'fcm_token',
+    ];
+
+    protected $fillable = [
+        'user_id',
+        'fcm_token',
+        'device_info',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}
+-e 
+
+========== ./CacheLock.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class CacheLock
+ * 
+ * @property string $key
+ * @property string $owner
+ * @property int $expiration
+ *
+ * @package App\Models
+ */
+class CacheLock extends Model
+{
+	protected $table = 'cache_locks';
+	protected $primaryKey = 'key';
+	public $incrementing = false;
+	public $timestamps = false;
+
+	protected $casts = [
+		'expiration' => 'int'
+	];
+
+	protected $fillable = [
+		'owner',
+		'expiration'
+	];
+}
+-e 
+
+========== ./Consent.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class Consent
+ * 
+ * @property int $id
+ * @property int $user_id
+ * @property string $type
+ * @property string|null $ip
+ * @property string|null $user_agent
+ * @property Carbon $accepted_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * 
+ * @property User $user
+ *
+ * @package App\Models
+ */
+class Consent extends Model
+{
+	protected $table = 'consents';
+
+	protected $casts = [
+		'user_id' => 'int',
+		'accepted_at' => 'datetime'
+	];
+
+	protected $fillable = [
+		'user_id',
+		'type',
+		'ip',
+		'user_agent',
+		'accepted_at'
+	];
+
+	public function user()
+	{
+		return $this->belongsTo(User::class);
+	}
+}
+-e 
+
+========== ./JobBatch.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class JobBatch
+ * 
+ * @property string $id
+ * @property string $name
+ * @property int $total_jobs
+ * @property int $pending_jobs
+ * @property int $failed_jobs
+ * @property string $failed_job_ids
+ * @property string|null $options
+ * @property int|null $cancelled_at
+ * @property int $created_at
+ * @property int|null $finished_at
+ *
+ * @package App\Models
+ */
+class JobBatch extends Model
+{
+	protected $table = 'job_batches';
+	public $incrementing = false;
+	public $timestamps = false;
+
+	protected $casts = [
+		'total_jobs' => 'int',
+		'pending_jobs' => 'int',
+		'failed_jobs' => 'int',
+		'cancelled_at' => 'int',
+		'finished_at' => 'int'
+	];
+
+	protected $fillable = [
+		'name',
+		'total_jobs',
+		'pending_jobs',
+		'failed_jobs',
+		'failed_job_ids',
+		'options',
+		'cancelled_at',
+		'finished_at'
+	];
+}
+-e 
+
+========== ./Loan.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+/**
+ * Class Loan
+ * 
+ * @property int $id
+ * @property int $user_id
+ * @property float $amount
+ * @property float $interest_rate
+ * @property float|null $late_interest_rate
+ * @property int $term_days
+ * @property string $currency
+ * @property float|null $cat
+ * @property array|null $amortization_policy
+ * @property string $status
+ * @property Carbon|null $requested_at
+ * @property Carbon|null $approved_at
+ * @property Carbon|null $rejected_at
+ * @property string|null $rejection_reason
+ * @property Carbon|null $disbursed_at
+ * @property string|null $purpose
+ * @property array|null $score_snapshot
+ * @property string|null $rules_version
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property string|null $deleted_at
+ * 
+ * @property User $user
+ * @property Collection|Payment[] $payments
+ *
+ * @package App\Models
+ */
+class Loan extends Model
+{
+	use SoftDeletes;
+	protected $table = 'loans';
+
+	protected $casts = [
+		'user_id' => 'int',
+		'amount' => 'float',
+		'interest_rate' => 'float',
+		'late_interest_rate' => 'float',
+		'term_days' => 'int',
+		'cat' => 'float',
+		'amortization_policy' => 'json',
+		'requested_at' => 'datetime',
+		'approved_at' => 'datetime',
+		'rejected_at' => 'datetime',
+		'disbursed_at' => 'datetime',
+		'score_snapshot' => 'json'
+	];
+
+	protected $fillable = [
+		'user_id',
+		'amount',
+		'interest_rate',
+		'late_interest_rate',
+		'term_days',
+		'currency',
+		'cat',
+		'amortization_policy',
+		'status',
+		'requested_at',
+		'approved_at',
+		'rejected_at',
+		'rejection_reason',
+		'disbursed_at',
+		'purpose',
+		'score_snapshot',
+		'rules_version'
+	];
+
+	public function user()
+	{
+		return $this->belongsTo(User::class);
+	}
+
+	public function payments()
+	{
+		return $this->hasMany(Payment::class);
+	}
+}
+-e 
+
+========== ./WebhookEvent.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class WebhookEvent
+ * 
+ * @property int $id
+ * @property string $source
+ * @property string|null $event_type
+ * @property string $event_id
+ * @property array $payload
+ * @property Carbon $received_at
+ * @property Carbon|null $processed_at
+ * @property string $status
+ * @property string|null $error_message
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @package App\Models
+ */
+class WebhookEvent extends Model
+{
+	protected $table = 'webhook_events';
+
+	protected $casts = [
+		'payload' => 'json',
+		'received_at' => 'datetime',
+		'processed_at' => 'datetime'
+	];
+
+	protected $fillable = [
+		'source',
+		'event_type',
+		'event_id',
+		'payload',
+		'received_at',
+		'processed_at',
+		'status',
+		'error_message'
+	];
+}
+-e 
+
+========== ./Job.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class Job
+ * 
+ * @property int $id
+ * @property string $queue
+ * @property string $payload
+ * @property int $attempts
+ * @property int|null $reserved_at
+ * @property int $available_at
+ * @property int $created_at
+ *
+ * @package App\Models
+ */
+class Job extends Model
+{
+	protected $table = 'jobs';
+	public $timestamps = false;
+
+	protected $casts = [
+		'attempts' => 'int',
+		'reserved_at' => 'int',
+		'available_at' => 'int'
+	];
+
+	protected $fillable = [
+		'queue',
+		'payload',
+		'attempts',
+		'reserved_at',
+		'available_at'
+	];
+}
+-e 
+
+========== ./Notification.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Class Notification
+ * 
+ * @property string $id
+ * @property string $type
+ * @property string $notifiable_type
+ * @property int $notifiable_id
+ * @property string $data
+ * @property Carbon|null $read_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @package App\Models
+ */
+class Notification extends Model
+{
+	protected $table = 'notifications';
+	public $incrementing = false;
+
+	protected $casts = [
+		'notifiable_id' => 'int',
+		'read_at' => 'datetime'
+	];
+
+	protected $fillable = [
+		'type',
+		'notifiable_type',
+		'notifiable_id',
+		'data',
+		'read_at'
+	];
+}
+-e 
+
+========== ./KycRecord.php ==========
+<?php
+
+/**
+ * Created by Reliese Model.
+ */
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+/**
+ * Class KycRecord
+ * 
+ * @property int $id
+ * @property int $user_id
+ * @property string $provider
+ * @property array|null $doc_paths
+ * @property string|null $selfie_path
+ * @property string|null $result
+ * @property int|null $score
+ * @property array|null $raw_payload
+ * @property float|null $location_lat
+ * @property float|null $location_lng
+ * @property float|null $location_accuracy_m
+ * @property Carbon|null $captured_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property string|null $deleted_at
+ * 
+ * @property User $user
+ *
+ * @package App\Models
+ */
+class KycRecord extends Model
+{
+	use SoftDeletes;
+	protected $table = 'kyc_records';
+
+	protected $casts = [
+		'user_id' => 'int',
+		'doc_paths' => 'json',
+		'score' => 'int',
+		'raw_payload' => 'json',
+		'location_lat' => 'float',
+		'location_lng' => 'float',
+		'location_accuracy_m' => 'float',
+		'captured_at' => 'datetime'
+	];
+
+	protected $fillable = [
+		'user_id',
+		'provider',
+		'doc_paths',
+		'selfie_path',
+		'result',
+		'score',
+		'raw_payload',
+		'location_lat',
+		'location_lng',
+		'location_accuracy_m',
+		'captured_at'
+	];
+
+	public function user()
+	{
+		return $this->belongsTo(User::class);
+	}
+}
+-e 
+

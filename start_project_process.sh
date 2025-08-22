@@ -11,7 +11,7 @@ php artisan queue:restart
 php artisan serve --host=0.0.0.0 --port=8000 &
 
 # Iniciar workers de las colas (default y moderation)
-php artisan queue:work --queue=default,moderation &
+php artisan queue:work --queue=default,notifications,moderation &
 
 # Mantener procesos en foreground
 wait
