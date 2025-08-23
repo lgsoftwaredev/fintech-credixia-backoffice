@@ -12,9 +12,9 @@ class AuthTokenResource extends JsonResource
             'user' => new UserResource($this->resource['user']),
             'tokens' => [
                 'token_type'    => 'Bearer',
-                'access_token'  => $this->resource['access_token'],
-                'refresh_token' => $this->resource['refresh_token'],
-                'expires_in'    => $this->resource['expires_in'], // seconds
+                'access_token'  => $this->resource['access_token'] ?? '',
+                'refresh_token' => $this->resource['refresh_token'] ??'',
+                'expires_in'    => $this->resource['expires_in'] ?? '', // seconds
             ],
             'scopes' => $this->resource['scopes'] ?? [],
         ];

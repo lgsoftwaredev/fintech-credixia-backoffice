@@ -28,7 +28,15 @@ class AuthController extends Controller
         private PasswordResetService $passwordResetService
     ) {
     }
-
+    public function logout(Request $request)
+    {
+        try {
+            $this->authService->logout($request->user());
+            return $this->success(null, 'Sesión cerrada correctamente');
+        } catch (\Throwable $e) {
+            return $this->error('No se pudo cerrar sesión', 500, ['exception' => $e->getMessage()]);
+        }
+    }
     /**
      * S1-02 · Paso 1: valida credenciales y envía OTP.
      */
@@ -56,6 +64,7 @@ class AuthController extends Controller
         $user->notify(new OtpNotification($user, $code, 'login'));
 
         return $this->success([
+            'user_id' => $user->id,
             'next_step' => 'otp',
             'ttl_minutes' => config('authflow.otp_ttl_minutes'),
             'user_hint' => [
@@ -73,7 +82,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
             'otp' => ['required', 'string', 'size:6'],
-            'purpose' => ['required', 'string', 'in:login,register'],
+            'purpose' => ['required', 'string', 'in:login,register,reset'],
 
         ], [
             'user_id.required' => 'Falta el usuario.',
@@ -85,32 +94,46 @@ class AuthController extends Controller
         ]);
 
         $user = User::find($data['user_id']);
-        $purpose = $data['purpose'] === 'login'
-            ? $this->otpService->loginPurpose()
-            : $this->otpService->registerPurpose();
-
+        $purpose = "";
+        switch ($data['purpose']) {
+            case 'login':
+                $purpose = $this->otpService->loginPurpose();
+                break;
+            case 'register':
+                $purpose = $this->otpService->registerPurpose();
+                break;
+            default:
+                $purpose = $this->otpService->resetPurpose();
+                break;
+        }
         $valid = $this->otpService->validate($purpose, $user->id, $data['otp']);
         if (!$valid) {
             return $this->error('OTP inválido o expirado', 422);
         }
         // ✅ Marca el OTP como verificado: habilita un único intento de password grant
-        Cache::put("otp:verified:{$user->id}", true, now()->addMinutes(config('authflow.otp_ttl_minutes', 5)));
+        if ($purpose != 'reset') {
+            Cache::put("otp:verified:{$user->id}", true, now()->addMinutes(config('authflow.otp_ttl_minutes', 5)));
+            // Emite tokens
+            $tokens = $this->authService->issueTokensWithPasswordClient($user);
 
-        // Emite tokens
-        $tokens = $this->authService->issueTokensWithPasswordClient($user);
+            // Opcional: autenticar contexto actual
+            Auth::login($user);
 
-        // Opcional: autenticar contexto actual
-        Auth::login($user);
+            $resource = new AuthTokenResource([
+                'user' => $user,
+                'access_token' => $tokens['access_token'],
+                'refresh_token' => $tokens['refresh_token'],
+                'expires_in' => $tokens['expires_in'],
+                'scopes' => ['read:*', 'write:*'],
+            ]);
 
-        $resource = new AuthTokenResource([
-            'user' => $user,
-            'access_token' => $tokens['access_token'],
-            'refresh_token' => $tokens['refresh_token'],
-            'expires_in' => $tokens['expires_in'],
-            'scopes' => ['read:*', 'write:*'],
-        ]);
+        } else {
+            $resource = new AuthTokenResource([
+                'user' => $user,
+            ]);
+        }
 
-        return $this->success($resource, 'Sesión iniciada correctamente');
+        return $this->success($resource, 'Código validado correctamente');
     }
 
     /**
@@ -134,6 +157,7 @@ class AuthController extends Controller
         Log::info('OTP generado para reset', ['user_id' => $user->id, 'code' => $code]);
 
         return $this->success([
+            'user_id' => $user->id,
             'next_step' => 'reset',
             'ttl_minutes' => config('authflow.otp_ttl_minutes'),
             'user_hint' => [
@@ -149,23 +173,26 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
-            'otp' => ['required', 'string', 'size:6'],
+            'identifier' => ['required', 'string'], // email o phone
+            // 'otp' => ['required', 'string', 'size:6'],
             'new_password' => ['required', 'string', 'min:8'],
         ], [
-            'user_id.required' => 'Falta el usuario.',
-            'user_id.exists' => 'Usuario no encontrado.',
-            'otp.required' => 'Debes ingresar el código OTP.',
-            'otp.size' => 'El código OTP debe tener 6 dígitos.',
+            'identifier.required' => 'Debes ingresar tu correo o teléfono.',
+            // 'otp.required' => 'Debes ingresar el código OTP.',
+            // 'otp.size' => 'El código OTP debe tener 6 dígitos.',
             'new_password.required' => 'Debes ingresar la nueva contraseña.',
             'new_password.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
 
-        $user = User::find($data['user_id']);
-        $valid = $this->otpService->validate($this->otpService->resetPurpose(), $user->id, $data['otp']);
-        if (!$valid) {
-            return $this->error('OTP inválido o expirado', 422);
+        $user = $this->passwordResetService->findUserByIdentifier($data['identifier']);
+        if (!$user) {
+            // No revelar existencia: respuesta genérica
+            return $this->success(null, 'Si existe una cuenta, se envió un código de verificación');
         }
+        // $valid = $this->otpService->validate($this->otpService->resetPurpose(), $user->id, $data['otp']);
+        // if (!$valid) {
+        //     return $this->error('OTP inválido o expirado', 422);
+        // }
 
         $this->passwordResetService->setNewPassword($user, $data['new_password']);
 

@@ -62,7 +62,7 @@ Route::prefix('v1')->group(function () {
 
     // KYC provider callback (MetaMap/Truora) — should be signed/verified
     Route::post('users/{user}/kyc/callback', [KycController::class, 'callback'])
-        // ->middleware('verify.kyc.signature') // TODO: add your signature check
+        ->middleware('verify.kyc.signature') // TODO: add your signature check
         ->name('kyc.callback');
 
     // Payment webhooks (SPEI/Conekta/STP/MercadoPago) — idempotent handlers
@@ -88,13 +88,16 @@ Route::prefix('v1')->group(function () {
         | Submit KYC package and track status
         */
         Route::prefix('kyc')->group(function () {
-            Route::post('submit', [KycController::class, 'submit'])
-                ->middleware('scopes:write:kyc')
-                ->name('kyc.submit');
+            // Route::post('submit', [KycController::class, 'submit'])
+            //     ->middleware('scopes:write:kyc')
+            //     ->name('kyc.submit');
+            // Route::post('session', [KycController::class, 'createSession']); // NUEVO (SDK)
 
             Route::get('status', [KycController::class, 'status'])
-                ->middleware('scopes:read:kyc')
+                // ->middleware('scopes:read:kyc')
                 ->name('kyc.status');
+            Route::post('link', [KycController::class, 'linkFromSdk'])->name('kyc.link');
+
         });
 
         /*

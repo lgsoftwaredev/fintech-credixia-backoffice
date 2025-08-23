@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->string('phone', 32)->unique()->nullable();
 
             // KYC high-level status reflected on user
-            $table->enum('kyc_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->enum('kyc_status', ['none','pending', 'approved', 'rejected'])->default('none');
 
             // Risk score snapshot (0..1000 typical)
             $table->unsignedSmallInteger('risk_score')->nullable();

@@ -7,43 +7,33 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
+   // ...
+
+public function index(Request $request)
+{
+    $query = \App\Models\User::query()->with('kyc_record');
+
+    if ($search = $request->string('q')->toString()) {
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('email', 'like', "%{$search}%")
+              ->orWhere('phone', 'like', "%{$search}%");
+        });
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
+    if ($ks = $request->string('kyc_status')->toString()) {
+        $query->where('kyc_status', $ks); // approved|rejected|pending
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+    $users = $query->orderByDesc('id')->paginate(20);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
+    return \App\Http\Resources\Api\UserResource::collection($users);
+}
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
+public function show(\App\Models\User $user)
+{
+    $user->load(['kyc_record', 'loans' => fn($q) => $q->latest()]);
+    return new \App\Http\Resources\Api\UserResource($user);
+}
+
 }

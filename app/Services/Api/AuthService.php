@@ -17,6 +17,19 @@ use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\App;
 class AuthService
 {
+    public function logout(User $user): void
+    {
+        // Revocar el access token actual
+        $token = $user->token();
+        if ($token instanceof Token) {
+            $token->revoke();
+        }
+
+        // Revocar todos los refresh tokens asociados
+        \DB::table('oauth_refresh_tokens')
+            ->where('access_token_id', $token->id ?? null)
+            ->update(['revoked' => true]);
+    }
     public function createUser(array $payload): User
     {
         // Sanitize minimal set

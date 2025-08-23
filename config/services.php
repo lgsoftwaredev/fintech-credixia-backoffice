@@ -34,5 +34,13 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'metamap' => [
+        'base_url' => env('METAMAP_BASE_URL', 'https://api.getmetamap.com'),
+        'client_id' => env('METAMAP_CLIENT_ID'),
+        'client_secret' => env('METAMAP_CLIENT_SECRET'),
+        'flow_id' => env('METAMAP_FLOW_ID'),
+        'webhook_secret' => env('METAMAP_WEBHOOK_SECRET'),
+        'timeout' => 5, // seg, según lineamientos de resiliencia
+    ],
 
 ];
