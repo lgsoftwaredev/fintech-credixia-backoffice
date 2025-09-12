@@ -38,7 +38,7 @@ class AuthService
             'email' => $payload['email'] ?? null,
             'phone' => $payload['phone'] ?? null,
             'password' => Hash::make($payload['password']),
-            'kyc_status' => 'pending',
+            'kyc_status' => 'none',
         ];
 
         /** @var User $user */

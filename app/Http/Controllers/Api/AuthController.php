@@ -198,7 +198,7 @@ class AuthController extends Controller
 
         // Revocación de tokens anteriores (Passport): cerrar sesiones existentes
         // Nota: Implementa tu revocación centralizada si manejas múltiples tokens/clients
-        // $user->tokens()->delete();
+        $user->tokens()->delete();
 
         return $this->success(new UserResource($user), 'Contraseña actualizada correctamente');
     }
