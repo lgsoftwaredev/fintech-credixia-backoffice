@@ -18,13 +18,13 @@ return new class extends Migration
             $table->boolean('is_active')->default(false);
 
             // Weights 0..1 or 0..100 (use 0..100 for clarity here)
-            $table->unsignedTinyInteger('weight_history_of_payments')->default(40);
-            $table->unsignedTinyInteger('weight_user_tenure')->default(20);
-            $table->unsignedTinyInteger('weight_current_risk')->default(20);
-            $table->unsignedTinyInteger('weight_device_trust')->default(10);
-            $table->unsignedTinyInteger('weight_kyc')->default(10);
+            $table->unsignedTinyInteger('weight_history_of_payments')->default(40);//peso en el scoring para el historial de pagos (ej. 40%).
+            $table->unsignedTinyInteger('weight_user_tenure')->default(20);//peso por antigüedad del usuario (ej. 20%).
+            $table->unsignedTinyInteger('weight_current_risk')->default(20);//peso por riesgo actual (ej. 20%).
+            $table->unsignedTinyInteger('weight_device_trust')->default(10);//peso por confianza en el dispositivo (ej. 10%).
+            $table->unsignedTinyInteger('weight_kyc')->default(10);//peso por nivel de KYC (ej. 10%).
 
-            $table->json('extra')->nullable();
+            $table->json('extra')->nullable();//JSON opcional para extensiones (ej. pesos adicionales futuros, parámetros experimentales).
 
             $table->timestamps();
         });

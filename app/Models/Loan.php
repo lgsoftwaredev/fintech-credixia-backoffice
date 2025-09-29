@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class Loan
- * 
+ *
  * @property int $id
  * @property int $user_id
  * @property float $amount
@@ -35,7 +35,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property string|null $deleted_at
- * 
+ *
  * @property User $user
  * @property Collection|Payment[] $payments
  *
@@ -43,51 +43,56 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Loan extends Model
 {
-	use SoftDeletes;
-	protected $table = 'loans';
+    use SoftDeletes;
+    protected $table = 'loans';
 
-	protected $casts = [
-		'user_id' => 'int',
-		'amount' => 'float',
-		'interest_rate' => 'float',
-		'late_interest_rate' => 'float',
-		'term_days' => 'int',
-		'cat' => 'float',
-		'amortization_policy' => 'json',
-		'requested_at' => 'datetime',
-		'approved_at' => 'datetime',
-		'rejected_at' => 'datetime',
-		'disbursed_at' => 'datetime',
-		'score_snapshot' => 'json'
-	];
+    protected $casts = [
+        'user_id' => 'int',
+        'amount' => 'float',
+        'interest_rate' => 'float',
+        'late_interest_rate' => 'float',
+        'term_days' => 'int',
+        'cat' => 'float',
+        'amortization_policy' => 'json',
+        'requested_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'disbursed_at' => 'datetime',
+        'score_snapshot' => 'json'
+    ];
 
-	protected $fillable = [
-		'user_id',
-		'amount',
-		'interest_rate',
-		'late_interest_rate',
-		'term_days',
-		'currency',
-		'cat',
-		'amortization_policy',
-		'status',
-		'requested_at',
-		'approved_at',
-		'rejected_at',
-		'rejection_reason',
-		'disbursed_at',
-		'purpose',
-		'score_snapshot',
-		'rules_version'
-	];
+    protected $fillable = [
+        'user_id',
+        'amount',
+        'interest_rate',
+        'late_interest_rate',
+        'term_days',
+        'currency',
+        'cat',
+        'amortization_policy',
+        'status',
+        'requested_at',
+        'approved_at',
+        'rejected_at',
+        'rejection_reason',
+        'disbursed_at',
+        'purpose',
+        'score_snapshot',
+        'rules_version'
+    ];
 
-	public function user()
-	{
-		return $this->belongsTo(User::class);
-	}
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
-	public function payments()
-	{
-		return $this->hasMany(Payment::class);
-	}
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+    public function attachments()
+    {
+        return $this->hasMany(LoanAttachment::class);
+    }
+
 }

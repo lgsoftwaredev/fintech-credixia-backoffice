@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\LoanAttachmentController;
+use App\Http\Controllers\Api\RuleSetController;
 use Illuminate\Support\Facades\Route;
 
 // Api Controllers
@@ -104,17 +106,36 @@ Route::prefix('v1')->group(function () {
         |--------------------- Loans -----------------------
         | Simulation, CRUD (limited), schedule, settlement
         */
+
+        Route::get('loans/history', [LoanController::class, 'history'])
+            // ->middleware('scopes:read:loan')
+            ->name('loans.history');
+
+        // Historial de créditos con filtros
+
+        // Pagos de un préstamo específico
+        Route::get('loans/{loan}/payments', [LoanController::class, 'payments'])
+            // ->middleware('scopes:read:payment')
+            ->name('loans.payments');
+
         Route::post('loans/simulate', [LoanSimulationController::class, 'simulate'])
-            ->middleware('scopes:read:loan')
+            // ->middleware('scopes:read:loan')
             ->name('loans.simulate');
 
-        Route::get('loans', [LoanController::class, 'index'])
-            ->middleware('scopes:read:loan')
-            ->name('loans.index');
-
+        // --- Loans core ---
         Route::post('loans', [LoanController::class, 'store'])
-            ->middleware('scopes:write:loan')
+            // ->middleware('scopes:write:loan')
             ->name('loans.store');
+
+        Route::post('loans/{loan}/accept-offer', [LoanController::class, 'acceptOffer'])
+            ->middleware('scopes:write:loan')
+            ->name('loans.acceptOffer');
+
+        // --- Attachments (opcionales) ---
+        Route::post('loans/{loan}/attachments', [LoanAttachmentController::class, 'store'])
+            // ->middleware('scopes:write:loan')
+            ->name('loans.attachments.store');
+
 
         Route::get('loans/{loan}', [LoanController::class, 'show'])
             ->middleware('scopes:read:loan')
@@ -165,11 +186,11 @@ Route::prefix('v1')->group(function () {
         | In-app notification center
         */
         Route::get('notifications', [NotificationController::class, 'index'])
-            ->middleware('scopes:read:notification')
+            // ->middleware('scopes:read:notification')
             ->name('notifications.index');
 
         Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])
-            ->middleware('scopes:write:notification')
+            // ->middleware('scopes:write:notification')
             ->name('notifications.readAll');
 
         /*
@@ -180,6 +201,7 @@ Route::prefix('v1')->group(function () {
             ->middleware('scopes:read:consent')
             ->name('consents.index');
     });
+    Route::get('rule-sets', [RuleSetController::class, 'index']);
 
 
     /*
