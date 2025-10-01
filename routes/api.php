@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\LoanSimulationController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PaymentWebhookController;
+ use App\Http\Controllers\Api\ProfileController;
 
 // Admin Controllers
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
@@ -180,7 +181,29 @@ Route::prefix('v1')->group(function () {
         Route::post('payments/{payment}/evidence', [PaymentController::class, 'uploadEvidence'])
             ->middleware('scopes:write:payment')
             ->name('payments.evidence');
+/*
+        |-------------------- Profile ---------------------
+        | Upcoming, detail, SPEI reference, upload evidence
+        */
+        Route::get('payments', [PaymentController::class, 'index'])
+            ->middleware('scopes:read:payment')
+            ->name('payments.index');
 
+      
+/*
+        Route::middleware('auth:api')->group(function () {
+            Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
+            Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
+        });
+*/
+
+        Route::get('profile', [ProfileController::class, 'show'])
+           // ->middleware('scopes:read:payment')
+            ->name('profile.show');
+
+        
+
+        
         /*
         |------------------ Notifications ------------------
         | In-app notification center
