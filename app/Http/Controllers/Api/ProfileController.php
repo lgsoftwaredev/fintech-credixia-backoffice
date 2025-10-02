@@ -32,6 +32,6 @@ class ProfileController extends Controller
         ]);
 
         $user = $this->profileService->updateProfile($request->user(), $data);
-        return $this->success(new ProfileResource($user), 'Perfil actualizado correctamente');
+        return $this->success(new ProfileResource($user), 'Perfil actualizado correctamente6');
     }
 }

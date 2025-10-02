@@ -185,11 +185,6 @@ Route::prefix('v1')->group(function () {
         |-------------------- Profile ---------------------
         | Upcoming, detail, SPEI reference, upload evidence
         */
-        Route::get('payments', [PaymentController::class, 'index'])
-            ->middleware('scopes:read:payment')
-            ->name('payments.index');
-
-      
 /*
         Route::middleware('auth:api')->group(function () {
             Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
@@ -201,9 +196,10 @@ Route::prefix('v1')->group(function () {
            // ->middleware('scopes:read:payment')
             ->name('profile.show');
 
-        
+        Route::put('profile', [ProfileController::class, 'update'])
+          //  ->middleware('scopes:read:payment')
+            ->name('profile.update');
 
-        
         /*
         |------------------ Notifications ------------------
         | In-app notification center
