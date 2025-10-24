@@ -66,7 +66,8 @@ class User extends Authenticatable implements OAuthenticatable
         'email_verified_at',
         'phone_verified_at',
         'password',
-        'remember_token'
+        'remember_token',
+         'role',
     ];
 
     public function consents()
@@ -102,5 +103,15 @@ class User extends Authenticatable implements OAuthenticatable
         }
 
         return Hash::check($password, $this->password);
+    }
+    
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isClient(): bool
+    {
+        return $this->role === 'client';
     }
 }

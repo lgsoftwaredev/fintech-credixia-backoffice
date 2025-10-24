@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Admin\LoanController as AdminLoanController;
 use App\Http\Controllers\Api\Admin\MetricsController as AdminMetricsController;
 use App\Http\Controllers\Api\Admin\RuleSetController as AdminRuleSetController;
 use App\Http\Controllers\Api\Admin\ScoringController as AdminScoringController;
+use App\Http\Controllers\Api\Admin\AdminAuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -228,6 +229,12 @@ Route::prefix('v1')->group(function () {
     | Admin endpoints (RBAC via scopes: admin:*)
     |--------------------------------------------------------------------------
     */
+
+    Route::prefix('admin')->group(function () {
+        Route::post('login', [AdminAuthController::class, 'login'])->name('admin.auth.login');
+
+    });
+
     Route::middleware(['auth:api', 'scopes:admin:*'])->prefix('admin')->group(function () {
 
         // Users
@@ -252,5 +259,9 @@ Route::prefix('v1')->group(function () {
         Route::get('scoring-weights', [AdminScoringController::class, 'index'])->name('admin.scoring.index');
         Route::post('scoring-weights', [AdminScoringController::class, 'store'])->name('admin.scoring.store');
         Route::patch('scoring-weights/{weight}/activate', [AdminScoringController::class, 'activate'])->name('admin.scoring.activate');
+
+         Route::post('logout', [AdminAuthController::class, 'logout'])->name('admin.auth.logout');
     });
+
+    
 });

@@ -1,6 +1,6 @@
 App file map (excluding app/Models)
-Project root: /Users/Geral/dev/fintech_credixia/fintech-credixia-backoffice
-Generated at (UTC): 2025-08-22T19:10:50Z
+Project root: /Users/kiubitech/Dev/fintech-credixia-backoffice
+Generated at (UTC): 2025-10-02T14:08:24Z
 --------------------------------------------------
 app
 app/Http
@@ -16,17 +16,30 @@ app/Http/Controllers/Api/ApiResponseTrait.php
 app/Http/Controllers/Api/AuthController.php
 app/Http/Controllers/Api/ConsentController.php
 app/Http/Controllers/Api/KycController.php
+app/Http/Controllers/Api/LoanAttachmentController.php
 app/Http/Controllers/Api/LoanController.php
 app/Http/Controllers/Api/LoanSimulationController.php
 app/Http/Controllers/Api/NotificationController.php
 app/Http/Controllers/Api/PaymentController.php
 app/Http/Controllers/Api/PaymentWebhookController.php
+app/Http/Controllers/Api/ProfileController.php
+app/Http/Controllers/Api/RuleSetController.php
 app/Http/Controllers/Controller.php
+app/Http/Middleware
+app/Http/Middleware/VerifyKycSignature.php
 app/Http/Resources
 app/Http/Resources/Api
 app/Http/Resources/Api/AuthTokenResource.php
+app/Http/Resources/Api/KycRecordResource.php
+app/Http/Resources/Api/KycStatusResource.php
+app/Http/Resources/Api/LoanResource.php
+app/Http/Resources/Api/LoanSimulationResource.php
+app/Http/Resources/Api/PaymentResource.php
+app/Http/Resources/Api/ProfileResource.php
 app/Http/Resources/Api/UserResource.php
 app/Jobs
+app/Jobs/ProcessLoanRequestJob.php
+app/Jobs/SendKycToProviderJob.php
 app/Jobs/SendPushJob.php
 app/Mail
 app/Mail/AdminSubscriptionEventMail.php
@@ -34,6 +47,7 @@ app/Notifications
 app/Notifications/BaseSystemNotification.php
 app/Notifications/KycApprovedNotification.php
 app/Notifications/LoanApprovedNotification.php
+app/Notifications/LoanRejectedNotification.php
 app/Notifications/OtpNotification.php
 app/Notifications/PaymentDueReminderNotification.php
 app/Providers
@@ -47,6 +61,9 @@ app/Services/Api/ConsentService.php
 app/Services/Api/CreditBureauService.php
 app/Services/Api/EmailService.php
 app/Services/Api/FirebaseService.php
+app/Services/Api/Kyc
+app/Services/Api/Kyc/KycProvider.php
+app/Services/Api/Kyc/MetaMapProvider.php
 app/Services/Api/KycService.php
 app/Services/Api/LoanService.php
 app/Services/Api/LoanSimulationService.php
@@ -57,6 +74,7 @@ app/Services/Api/PasswordResetService.php
 app/Services/Api/PaymentReconciliationService.php
 app/Services/Api/PaymentService.php
 app/Services/Api/PaymentWebhookService.php
+app/Services/Api/ProfileService.php
 app/Services/Api/PushService.php
 app/Services/Api/RuleSetService.php
 app/Services/Api/ScoringService.php
